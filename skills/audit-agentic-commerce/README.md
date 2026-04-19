@@ -9,18 +9,20 @@ Runs the same audit methodology used in the [Nohi Readiness Index
 Edition 1](https://github.com/zhao-hanbo/agentic-commerce-kit#the-rubric)
 (Premium DTC Beauty, 50 brands, April 2026). Given one store URL, it:
 
-1. Checks robots.txt for AI-crawler access (C1)
-2. Samples 3 product pages from the sitemap and verifies they render
-   server-side (C2) and carry complete `Product`/`Review` JSON-LD
-   (C4, C5)
+1. Checks `robots.txt` for AI-crawler access (C1)
+2. Samples 3 product pages from the sitemap, verifies server-side
+   rendering (C2), and checks JSON-LD for `Product` (C4) and
+   `AggregateRating` (C5) via **source-level `curl` fetch** (not
+   WebFetch — see methodology note below)
 3. Confirms sitemap freshness (C3)
 4. Checks homepage + auxiliary pages for `FAQPage`/`HowTo` (C6) and
-   `Organization` (C7) schema
+   `Organization` (C7) schema, source-level
 5. LLM-evaluates 5 PDP titles and descriptions for use-case specificity
-   and comparison context (C8, C9)
+   and buyer context (C8, C9)
 
-Output: score / 9, tier label, per-criterion findings with specific
-fixes, and a ranked top-3 priority list.
+Output: score / 9, shape-describing label, per-criterion findings with
+sample-scope caveats and specific fixes, schema-hygiene flags for
+malformed-but-present JSON-LD, and a ranked top-3 priority list.
 
 ## Install
 
@@ -36,21 +38,76 @@ Or for user-level install (available across all projects):
 ~/.claude/commands/audit-agentic-commerce.md
 ```
 
-## Run
+Requires [Claude Code](https://claude.com/product/claude-code) with
+`Bash` tool access enabled (for `curl`). No other dependencies.
 
-In Claude Code:
+## Run
 
 ```
 /audit-agentic-commerce https://www.summerfridays.com
 ```
 
-Takes ~60-90 seconds. Claude fetches the store, parses JSON-LD, and
-returns the structured report.
+Takes ~60-90 seconds.
+
+### Flags
+
+- `--confidence=high` — keeps the 3-PDP Index score but adds a 15-PDP
+  stability check and reports a confidence delta. Use when the base
+  sample might be unlucky.
+- `--full` — audits every PDP in the sitemap (capped at 200). Slow and
+  more expensive in tool calls. Intended for paid audit engagements
+  where "sample-based" isn't enough.
+
+Example:
+
+```
+/audit-agentic-commerce https://www.shopcider.com --confidence=high
+```
+
+## Methodology notes
+
+### Why `curl`, not WebFetch, for schema
+
+Claude Code's `WebFetch` converts HTML to markdown before returning
+it to the model — this strips `<script type="application/ld+json">`
+blocks. If you only use WebFetch, you cannot reliably check whether a
+page has schema; you can only check what made it through the markdown
+conversion (the visible text).
+
+This skill uses `Bash` + `curl` + a Python `json.loads` parser as the
+**primary path** for C4/C5/C6/C7. WebFetch is used only for:
+- `robots.txt` (C1) — plain text, no schema issue
+- `sitemap.xml` (C3) — XML, structured naturally
+- Visible-text evaluation for SSR (C2), titles (C8), descriptions (C9)
+
+If `curl` is blocked (rare — most stores ship JSON-LD in initial HTML),
+findings fall back to WebFetch with an explicit "not source-verified"
+caveat in the report.
+
+### Sample-based vs. sitewide
+
+Default audit samples **3 PDPs** for C2/C4/C5 and **5 PDPs** for
+C8/C9. This keeps the score directly comparable to the [Nohi
+Readiness Index](https://nohi.ai/research/agentic-readiness-index-edition-1)
+scoring methodology. All findings in the default mode use sample-based
+language ("across the 3 sampled PDPs") — never "sitewide" unless you
+run with `--full`.
+
+`--confidence=high` runs the 3-PDP score first (for comparability),
+then a 15-PDP extended check (for stability). The report includes a
+"confidence delta" section showing whether the extended sample
+confirms, weakens, or overturns the headline score.
+
+### Anti-hallucination
+
+The skill is instructed to quote only text actually returned by a tool
+call. It will not describe "what's on the about page" unless it
+fetched the about page.
 
 ## Sample output
 
 See [the kit's root README](../../README.md#sample-audit-summer-fridays)
-for a full audit of Summer Fridays (5/9 — Early Stage).
+for a sample audit of Summer Fridays with source-level evidence.
 
 ## Why this exists
 
@@ -59,24 +116,27 @@ Agentic commerce (ChatGPT Shopping, Perplexity Buy with Pro, Google
 AI Mode, Claude's forthcoming commerce capabilities) uses a **different
 retrieval stack**:
 
-- They respect `robots.txt` for their specific bots
-- They rely on structured data (JSON-LD) far more than web search did
+- They respect `robots.txt` for their specific user agents
+- They rely on structured data (JSON-LD) more heavily than web search
 - They cannot execute JavaScript on arbitrary merchant sites
 - They favor pages where title + description + schema together answer
   "does this product match what the shopper is asking for?"
 
 This skill operationalizes what "ready for agents" actually means,
-criterion-by-criterion.
+criterion-by-criterion, with source-level evidence.
 
 ## Limits
 
-- C10 (content uniqueness) is deferred — not in this skill
-- Non-Shopify platforms: C2-C5 still work, but PDP path detection
-  assumes `/products/*` (the standard Shopify pattern). For BigCommerce
-  / Adobe Commerce / custom stacks, you may need to adjust the sitemap
-  parsing logic
-- Rate limit: Claude Code's WebFetch rate-limits; auditing a large
-  catalog is fine for a single store but don't loop this over 100s
+- **C10 (content uniqueness)** is deferred — not in this skill
+- **Non-standard URL patterns**: default sitemap parsing assumes
+  `/products/*` (Shopify) or the sitemap has `<url>` entries for PDPs.
+  For custom URL patterns (e.g. Cider uses `/goods/{slug}-{id}`), the
+  skill adapts but may need manual PDP URL hints for edge cases
+- **Rate limits**: Claude Code's `Bash` and `WebFetch` each have rate
+  limits. A single-store audit is fine. `--full` on a 200-PDP catalog
+  may take several minutes
+- **Geography / local retrieval** is out of scope — a future "GEO
+  Readiness Index" will cover retrieval for local/regional queries
 
 ## License
 

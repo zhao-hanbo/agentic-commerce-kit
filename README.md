@@ -83,79 +83,105 @@ Full methodology: [Nohi Readiness Index — Edition 1 Methodology](https://nohi.
 
 ## Sample audit: Summer Fridays
 
-Run on `https://www.summerfridays.com`, April 2026.
+Run on `https://www.summerfridays.com`, April 2026. Default 3-PDP
+sample. Schema checks via source-level `curl` fetch of raw HTML.
 
-**Score: 5/9 — Early Stage**
+**Score: 5/9 — Strong Foundations, Variable Schema Coverage**
 
-| Area | Score | Passed |
+| Area | Score | Criteria passed |
 |---|---|---|
-| 1. Crawlability | 2/3 | C1, C3 |
-| 2. Structured data | 2/4 | C5, C7 |
+| 1. Crawlability | 3/3 | C1, C2, C3 |
+| 2. Structured data | 1/4 | C7 |
 | 3. Content quality | 1/2 | C8 |
 
-**What works:**
-- ✅ **C1 Crawler access** — robots.txt explicitly allows all 8 tested AI
-  bots (GPTBot, PerplexityBot, ClaudeBot, Google-Extended, Amazonbot,
-  CCBot, FacebookBot). Nothing blocked.
-- ✅ **C3 Sitemap freshness** — 110 URLs with `<lastmod>` within the past
-  90 days. Sitemap actively maintained.
-- ✅ **C5 Review schema** — all 3 sampled PDPs ship valid
-  `AggregateRating` JSON-LD with real review counts and ratings.
-- ✅ **C7 Organization schema** — homepage has complete `Organization`
-  JSON-LD with 5 `sameAs` social profiles.
-- ✅ **C8 PDP titles** — 4 of 5 sampled titles include specific use
-  cases ("Cloud Dew Gel Cream **Moisturizer**", "**Tatyana's** Lip
-  Combo").
+**What works** (source-level verified):
 
-**What's missing:**
-- ❌ **C2 PDP SSR** — 1 of 3 sampled PDPs
-  (`/products/mini-cloud-dew-gel-cream`) doesn't include the product
-  title in raw HTML. Price and description are present, but the
-  agent won't confidently associate them with the right product.
-  **Fix**: audit the product-template Liquid for that variant and
-  ensure `{{ product.title }}` renders above the fold, not lazy-loaded.
-- ❌ **C4 Product schema** — 1 of 3 PDPs
-  (`/products/softline-lip-liner-sugar`) is missing `Product` JSON-LD
-  entirely. The other two have complete schema with identifiers.
-  **Fix**: this PDP likely uses a newer template variant that dropped
-  the schema block. Re-apply the theme's product schema snippet. See
-  [Shopify's docs on product-page structured data](https://shopify.dev/docs/storefronts/themes/seo/product-pages).
-- ❌ **C6 FAQ / HowTo schema** — no `FAQPage` or `HowTo` JSON-LD
-  detected on homepage, product pages, or about/how-to-use pages.
-  Summer Fridays publishes rich how-to content; it's just not marked
-  up.
-  **Fix**: add `FAQPage` JSON-LD to the "How to use" section on each
-  PDP, and `HowTo` JSON-LD to any routine / tutorial posts. This is
-  the highest-leverage missing schema for skincare, because ChatGPT
-  queries like "how do I use a jet lag mask" match HowTo schema
-  directly.
-- ❌ **C9 PDP descriptions** — 0 of 5 sampled product descriptions
-  cover 3+ of: target skin type, ingredient rationale, comparison to
-  similar products, sizing reasoning, counter-indications. The copy
-  is on-brand but agent-hostile.
-  **Fix**: expand each PDP with a "Who it's for" block (skin type /
-  concern), a "How it compares" block (vs. your other SKUs or the
-  category norm), and a "What it isn't" block (counter-indications).
-  This is the single biggest lever on the 9-point scale because C9
-  touches every product.
+- ✅ **C1 Crawler access** — `robots.txt` allows all 8 tested AI bots
+  (GPTBot, PerplexityBot, ClaudeBot, `anthropic-ai`, Google-Extended,
+  Amazonbot, CCBot, FacebookBot). No matching `Disallow` rules.
+- ✅ **C2 PDP server-side render** — across the 3 sampled PDPs, raw
+  HTML contains product title, price, and description without requiring
+  JS.
+- ✅ **C3 Sitemap freshness** — valid sitemap index with `<lastmod>`
+  within the past 90 days.
+- ✅ **C7 Organization schema** — homepage ships a complete
+  `Organization` JSON-LD block: `name="Summer Fridays"`, `url`, and
+  `sameAs` array with 5 social-profile URLs.
+- ✅ **C8 PDP titles** — across the 5 sampled titles, 4+ include
+  specific use cases or differentiators ("Jet Lag Mask", "Cloud Dew
+  Gel Cream Moisturizer Deluxe Sample").
 
-**Priority top 3 (biggest leverage first):**
+**What's missing** (source-level verified):
 
-1. **Add C9 context blocks to every PDP description.** Expands
-   agent-answerability across the entire catalog. Estimated effort:
-   1-2 weeks with copywriter support.
-2. **Fix the one PDP missing `Product` JSON-LD** (C4). 15-minute theme
-   fix. Brings C4 to full 3/3.
-3. **Add `FAQPage` + `HowTo` schema** (C6). Maps onto the "how do I
-   use X" query surface where Summer Fridays already has strong
-   organic content — just needs the markup.
+- ❌ **C4 Product schema** — across the 3 sampled PDPs, 1 of 3
+  (`/products/cloud-dew`) has no `Product` JSON-LD at all — only
+  `Organization` schema ships on that page. The other PDPs sampled
+  (e.g. `/products/jet-lag-mask`) ship a valid `Product` block with
+  `name`, `image`, `brand`, `offers.price`, `offers.availability`,
+  `sku`, and `gtin`. The finding is variance between templates, not
+  absence everywhere.
+  **Fix**: audit the PDP Liquid templates to identify which variant
+  ships without Product schema and restore the schema snippet. Verify
+  across a broader sample with `--confidence=high`.
+- ❌ **C5 AggregateRating schema** — across the 3 sampled PDPs,
+  `aggregateRating` presence varies. On `/products/jet-lag-mask` it
+  appears in a separate Product block (ratingValue 4.5, reviewCount
+  2771) rather than inside the main Product block — machine parsers
+  may or may not associate them. On `/products/cloud-dew` no
+  aggregateRating is emitted.
+  **Fix**: consolidate the split Product blocks so ratings live on the
+  same `Product` as the product fields, and ensure aggregateRating
+  emits on every PDP where the review count is non-zero.
+- ❌ **C6 FAQPage / HowTo schema** — `/pages/faq` was fetched and
+  contains only `Organization` schema, no `FAQPage`. Homepage and
+  other auxiliary pages also lack FAQ/HowTo markup.
+  **Fix**: Summer Fridays publishes extensive "How to use" content
+  per product — wrap this content in `HowTo` JSON-LD on PDPs and
+  `FAQPage` JSON-LD on `/pages/faq`. See
+  [schema.org/HowTo](https://schema.org/HowTo).
+- ❌ **C9 PDP descriptions** (evaluated on visible-text via WebFetch)
+  — across the 5 sampled PDPs, descriptions are largely marketing-led
+  with limited buyer-context cues (comparison to adjacent SKUs, skin-
+  type rationale, counter-indications). This finding is based on
+  rendered-response text; the descriptions may include these cues
+  below the fold or in expandable sections that weren't fetched.
+  **Fix**: expand PDP descriptions with explicit buyer-context blocks
+  (who it's for / how it compares / when to use / what it isn't).
 
-Shipping 1-3 would take Summer Fridays from 5/9 (Early Stage) to 8/9
-(Agent-Ready) in one quarter.
+**Schema hygiene flags** (present but malformed / worth fixing):
 
-*Disclosure: this audit scores the 9 Edition-1 criteria. It does not
-audit uniqueness (C10, deferred) or geographic / local retrieval (GEO,
-future edition).*
+- Split Product blocks on `/products/jet-lag-mask` — one block holds
+  product fields (name, sku, gtin), a separate block holds
+  aggregateRating. Google's Rich Results parser may not associate the
+  rating with the product. Recommended: consolidate into a single
+  block.
+
+**Priority top 3** (biggest leverage first):
+
+1. **Restore Product + AggregateRating schema on every PDP.**
+   Consolidating the split blocks and adding Product schema to the
+   PDPs currently missing it would move C4 and C5 toward PASS across
+   the sample. Lightweight if the Liquid template already has the
+   fields; heavier if the missing-schema PDPs use a different template
+   variant.
+2. **Add `FAQPage` / `HowTo` schema** (C6). Summer Fridays has strong
+   how-to content on PDPs; the markup layer is the gap. Effort depends
+   on whether how-to content is structured in a reusable page section.
+3. **Expand PDP descriptions with buyer-context cues** (C9). The
+   highest-leverage change because it affects every product, but also
+   the only one that requires editorial rather than template work.
+
+Implementing 1-3 would move this brand materially upward on the
+framework. Final score depends on implementation quality and broader
+content improvements.
+
+*Disclosure: this audit scored 3 PDPs (via source-level `curl` fetches
+on 2026-04-19), 2 auxiliary pages (homepage, `/pages/faq`), plus
+`robots.txt` and `sitemap.xml`. Findings are sample-based. It does
+not audit uniqueness (C10, deferred) or GEO (geographic/local
+retrieval). Schema variance in sampled PDPs does not guarantee absence
+sitewide — rerun with `--confidence=high` or `--full` for broader
+coverage.*
 
 ## Related work
 
