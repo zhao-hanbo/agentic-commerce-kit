@@ -44,6 +44,26 @@ CSS = """
   --border: #e5e1d8;
   --code-bg: #f4f1ec;
   --accent: #2b4a5c;
+  --stripe-1: #f0ece2;
+  --stripe-2: #e5e1d8;
+}
+[data-theme="dark"] {
+  --ink: #e8eaed;
+  --ink-soft: #b8bdc4;
+  --ink-muted: #7d848d;
+  --pass: #4dbfad;
+  --pass-bg: #143027;
+  --fail: #e08774;
+  --fail-bg: #3a1f17;
+  --warn: #e5b46a;
+  --warn-bg: #3a2d15;
+  --bg: #0f1419;
+  --card: #1a2028;
+  --border: #2a3139;
+  --code-bg: #1e252e;
+  --accent: #8fb4c9;
+  --stripe-1: #252c35;
+  --stripe-2: #2a3139;
 }
 * { box-sizing: border-box; }
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -80,7 +100,7 @@ h1 { font-size: 32px; line-height: 1.2; font-weight: 700; margin: 0 0 8px; lette
 .segment { flex: 1; border-right: 1px solid var(--border); }
 .segment:last-child { border-right: none; }
 .segment.pass { background: var(--pass); }
-.segment.fail { background: repeating-linear-gradient(45deg, #f0ece2, #f0ece2 4px, #e5e1d8 4px, #e5e1d8 8px); }
+.segment.fail { background: repeating-linear-gradient(45deg, var(--stripe-1), var(--stripe-1) 4px, var(--stripe-2) 4px, var(--stripe-2) 8px); }
 .area-score { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 600; text-align: right; color: var(--ink-soft); }
 .criteria-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 48px; }
 .criterion-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; position: relative; border-left: 3px solid var(--border); }
@@ -142,6 +162,39 @@ details.check-log[open] summary { border-bottom: 1px solid var(--border); }
 .real-story p { font-size: 15px; color: var(--ink); line-height: 1.6; }
 footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 12px; color: var(--ink-muted); line-height: 1.6; }
 footer a { color: var(--accent); }
+[data-compact] main { padding: 28px 20px 40px; }
+[data-compact] h1 { font-size: 24px; }
+[data-compact] .header { margin-bottom: 24px; }
+[data-compact] .hero { padding: 20px; margin-bottom: 20px; gap: 24px; }
+[data-compact] .score-ring { width: 96px; height: 96px; }
+[data-compact] .score-ring svg { width: 96px; height: 96px; }
+[data-compact] .score-ring .number .big { font-size: 30px; }
+[data-compact] .hero-label { font-size: 18px; }
+[data-compact] .hero-sublabel { font-size: 13px; }
+[data-compact] .areas { margin-bottom: 24px; }
+[data-compact] .area-row { padding: 10px 0; font-size: 13px; }
+[data-compact] .bar { height: 22px; }
+[data-compact] .criteria-grid { gap: 8px; margin-bottom: 32px; }
+[data-compact] .criterion-card { padding: 12px; }
+[data-compact] .crit-title { font-size: 13px; }
+[data-compact] .crit-finding { font-size: 12.5px; }
+[data-compact] h2 { font-size: 18px; }
+[data-compact] .finding { padding: 14px 16px; margin-bottom: 10px; }
+[data-compact] .finding-header .finding-title { font-size: 15px; }
+[data-compact] .finding-grid dd { font-size: 13px; }
+[data-compact] .fix-list li { padding: 14px 16px 14px 56px; }
+[data-compact] .fix-list li::before { left: 16px; top: 14px; width: 28px; height: 28px; font-size: 13px; }
+[data-compact] .real-story { padding: 20px; margin-bottom: 20px; }
+[data-compact] .real-story p { font-size: 14px; }
+[data-compact] .detail-section { margin-bottom: 28px; }
+[data-compact] footer { margin-top: 28px; font-size: 11px; }
+@media print {
+  body { background: white; }
+  main { padding: 24px; max-width: none; }
+  .hero, .finding, .real-story, .criterion-card, .fix-list li { break-inside: avoid; }
+  details.check-log { display: none; }
+  footer { break-before: avoid; }
+}
 @media (max-width: 640px) {
   main { padding: 32px 16px 60px; }
   h1 { font-size: 26px; }
@@ -411,7 +464,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <title>{title}</title>
 <style>{css}</style>
 </head>
-<body>
+<body{body_attrs}>
 <main>
 {header}
 {hero}
@@ -428,15 +481,32 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 """
 
 
-def render(audit: dict[str, Any]) -> str:
-    """Render an audit dict (loaded from JSON) to a complete HTML string."""
+def render(
+    audit: dict[str, Any],
+    theme: str = "light",
+    compact: bool = False,
+) -> str:
+    """Render an audit dict (loaded from JSON) to a complete HTML string.
+
+    Args:
+        audit: the parsed JSON audit dict.
+        theme: "light" (default) or "dark".
+        compact: if True, apply compact spacing/fonts (good for print or embed).
+    """
     meta = audit["meta"]
     store_name = meta["store_name"]
     page_title = f"Agentic Commerce Readiness Audit — {store_name}"
 
+    body_attrs = ""
+    if theme == "dark":
+        body_attrs += ' data-theme="dark"'
+    if compact:
+        body_attrs += " data-compact"
+
     return PAGE_TEMPLATE.format(
         title=html_escape(page_title),
         css=CSS,
+        body_attrs=body_attrs,
         header=render_header(meta, audit["score"]),
         hero=render_score_hero(audit["score"]),
         areas=render_area_bars(audit["areas"]),
@@ -461,6 +531,17 @@ def main() -> int:
         default=None,
         help="Output HTML path (default: same basename as input with .html)",
     )
+    parser.add_argument(
+        "--theme",
+        choices=["light", "dark"],
+        default="light",
+        help="Color theme (default: light)",
+    )
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Compact spacing and fonts (good for print or embed)",
+    )
     args = parser.parse_args()
 
     if not args.input.exists():
@@ -470,7 +551,7 @@ def main() -> int:
     with args.input.open() as f:
         audit = json.load(f)
 
-    html = render(audit)
+    html = render(audit, theme=args.theme, compact=args.compact)
 
     output = args.output or args.input.with_suffix(".html")
     output.write_text(html, encoding="utf-8")
