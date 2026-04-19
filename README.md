@@ -5,7 +5,7 @@ readiness** — whether ChatGPT, Claude, Perplexity, and Gemini's commerce
 agents can find, parse, and recommend its products.
 
 ```
-/audit-agent-readiness https://your-store.com
+/audit-agentic-commerce https://your-store.com
 ```
 
 Output: score / 9, per-criterion findings, ranked fix list.
@@ -37,13 +37,13 @@ brands scored 7+.** This tool lets you audit yours.
 ```bash
 # Clone and place the skill in your project:
 git clone https://github.com/zhao-hanbo/agentic-commerce-kit.git
-cp agentic-commerce-kit/skills/audit-agent-readiness/command.md \
-   ./.claude/commands/audit-agent-readiness.md
+cp agentic-commerce-kit/skills/audit-agentic-commerce/command.md \
+   ./.claude/commands/audit-agentic-commerce.md
 
 # Or install globally (user scope):
 mkdir -p ~/.claude/commands/
-cp agentic-commerce-kit/skills/audit-agent-readiness/command.md \
-   ~/.claude/commands/audit-agent-readiness.md
+cp agentic-commerce-kit/skills/audit-agentic-commerce/command.md \
+   ~/.claude/commands/audit-agentic-commerce.md
 ```
 
 Requires [Claude Code](https://claude.com/product/claude-code). No
@@ -52,7 +52,7 @@ other dependencies.
 ## Use
 
 ```
-/audit-agent-readiness https://www.summerfridays.com
+/audit-agentic-commerce https://www.summerfridays.com
 ```
 
 Takes ~60-90 seconds.
@@ -198,6 +198,6 @@ MIT. See [LICENSE](./LICENSE).
 
 ## Author
 
-Built by [Hanbo Zhao](https://www.linkedin.com/in/hanbozhao) while
+Built by [Zhao Hanbo](https://www.linkedin.com/in/hanbozhao) while
 building [Nohi](https://nohi.ai) — the marketplace connecting DTC
 merchants to agentic commerce surfaces.

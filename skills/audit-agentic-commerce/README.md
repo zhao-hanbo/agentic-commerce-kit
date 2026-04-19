@@ -1,4 +1,4 @@
-# `/audit-agent-readiness`
+# `/audit-agentic-commerce`
 
 Score an ecommerce store against the 9-criterion **Agentic Commerce
 Readiness Index**. Works on any storefront; tuned for Shopify.
@@ -27,13 +27,13 @@ fixes, and a ranked top-3 priority list.
 Copy `command.md` into your project at:
 
 ```
-.claude/commands/audit-agent-readiness.md
+.claude/commands/audit-agentic-commerce.md
 ```
 
 Or for user-level install (available across all projects):
 
 ```
-~/.claude/commands/audit-agent-readiness.md
+~/.claude/commands/audit-agentic-commerce.md
 ```
 
 ## Run
@@ -41,7 +41,7 @@ Or for user-level install (available across all projects):
 In Claude Code:
 
 ```
-/audit-agent-readiness https://www.summerfridays.com
+/audit-agentic-commerce https://www.summerfridays.com
 ```
 
 Takes ~60-90 seconds. Claude fetches the store, parses JSON-LD, and
