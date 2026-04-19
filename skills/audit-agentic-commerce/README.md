@@ -39,7 +39,9 @@ Or for user-level install (available across all projects):
 ```
 
 Requires [Claude Code](https://claude.com/product/claude-code) with
-`Bash` tool access enabled (for `curl`). No other dependencies.
+`Bash` tool access enabled (for `curl`) and Python 3.9+ on PATH
+(for the HTML renderer; only needed if you use `--output=html`). No
+other dependencies.
 
 ## Run
 
@@ -51,6 +53,7 @@ Takes ~60-90 seconds.
 
 ### Flags
 
+**Sampling**
 - `--confidence=high` — keeps the 3-PDP Index score but adds a 15-PDP
   stability check and reports a confidence delta. Use when the base
   sample might be unlucky.
@@ -58,11 +61,49 @@ Takes ~60-90 seconds.
   more expensive in tool calls. Intended for paid audit engagements
   where "sample-based" isn't enough.
 
-Example:
+**Output** (v1.2+)
+- `--output=md` (default) — Markdown report only.
+- `--output=html` — ALSO emit a self-contained, shareable HTML report
+  (rendered by `render.py`, no browser deps).
+- `--output=json` — JSON only, for downstream pipelines / dashboards /
+  cross-brand aggregation.
+- `--output=both` — Markdown + HTML.
+
+Examples:
 
 ```
-/audit-agentic-commerce https://www.shopcider.com --confidence=high
+# Default: markdown only
+/audit-agentic-commerce https://www.shopcider.com
+
+# Stakeholder share: HTML artifact
+/audit-agentic-commerce https://www.shopcider.com --output=html
+
+# Higher-confidence audit + HTML share
+/audit-agentic-commerce https://www.shopcider.com --confidence=high --output=both
+
+# Data pipeline: JSON only
+/audit-agentic-commerce https://www.shopcider.com --output=json
 ```
+
+## Architecture (v1.2)
+
+```
+skills/audit-agentic-commerce/
+├── command.md      Claude Code slash command — orchestrates the audit
+├── render.py       Stdlib-only HTML renderer (input: JSON, output: HTML)
+├── example.json    Canonical example audit (Cider) — use as schema reference
+└── README.md       You are here
+```
+
+Claude does the audit work and emits a structured JSON dict. `render.py`
+transforms JSON into a self-contained HTML file with score ring, area
+gauges, criterion grid, finding cards, and a collapsible check log. The
+separation means:
+
+- Claude focuses on judgement (what passes, what doesn't, why)
+- Rendering is deterministic — same JSON always produces same HTML
+- JSON output can feed dashboards or cross-brand comparisons without
+  re-parsing prose
 
 ## Methodology notes
 

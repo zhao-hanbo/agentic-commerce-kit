@@ -1,0 +1,207 @@
+{
+  "meta": {
+    "audit_title": "Agentic Commerce Readiness Audit",
+    "store_name": "Cider",
+    "store_url": "https://www.shopcider.com",
+    "audit_date": "2026-04-19",
+    "sampling_scope": "3 PDPs / 5 titles / 4 aux pages",
+    "evidence_method": "source-level <code>curl</code>"
+  },
+  "score": {
+    "total": 6,
+    "max": 9,
+    "shape_label": "Partially Ready",
+    "description": "Strong crawlability and product-level structured data; gaps in brand-entity schema, FAQ markup, and PDP description depth. Schema hygiene issue worth attention."
+  },
+  "areas": [
+    {"num": 1, "name": "Crawlability", "score": 3, "max": 3, "passed": ["C1", "C2", "C3"]},
+    {"num": 2, "name": "Structured data", "score": 2, "max": 4, "passed": ["C4", "C5"]},
+    {"num": 3, "name": "Content quality", "score": 1, "max": 2, "passed": ["C8"]}
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "title": "AI crawler access",
+      "area": 1,
+      "status": "pass",
+      "one_liner": "All 8 tested AI bots allowed in <code>robots.txt</code>.",
+      "log_summary": "<strong>AI crawler access.</strong> <code>robots.txt</code> has <code>User-agent: *</code> with path-level disallows (cart, account, search params). Only <code>Pinterestbot</code> blocked wholesale. All 8 tested AI bots allowed."
+    },
+    {
+      "id": "C2",
+      "title": "PDP server-side render",
+      "area": 1,
+      "status": "pass",
+      "one_liner": "3/3 sampled PDPs render title, price, description in raw HTML.",
+      "log_summary": "<strong>PDP server-side render.</strong> All 3 sampled PDPs render title, price, and structured description in raw HTML without JS."
+    },
+    {
+      "id": "C3",
+      "title": "Sitemap freshness",
+      "area": 1,
+      "status": "pass",
+      "one_liner": "Sitemap index updated 2 days before audit, 4 sub-sitemaps.",
+      "log_summary": "<strong>Sitemap freshness.</strong> Valid sitemap index, 4 sub-sitemaps, <code>&lt;lastmod&gt;</code> 2 days before audit."
+    },
+    {
+      "id": "C4",
+      "title": "Product schema",
+      "area": 2,
+      "status": "pass",
+      "one_liner": "3/3 PDPs ship valid Product JSON-LD with required fields. Hygiene flag below.",
+      "log_summary": "<strong>Product schema.</strong> 3/3 PDPs have valid Product JSON-LD (name, image, brand, offers.price, priceCurrency, availability, sku). <em>See hygiene flag re: duplicate malformed block.</em>"
+    },
+    {
+      "id": "C5",
+      "title": "AggregateRating",
+      "area": 2,
+      "status": "pass",
+      "one_liner": "Real rating values (4.5–4.7) and review counts (219–1289).",
+      "log_summary": "<strong>AggregateRating.</strong> Real rating values and review counts on all 3 sampled PDPs (4.5/1289, 4.7/604, 4.6/219)."
+    },
+    {
+      "id": "C6",
+      "title": "FAQPage / HowTo schema",
+      "area": 2,
+      "status": "fail",
+      "one_liner": "FAQ content exists but not wrapped in <code>FAQPage</code> JSON-LD.",
+      "log_summary": "<strong>FAQPage / HowTo schema.</strong> Not present despite rich FAQ content. See detail above."
+    },
+    {
+      "id": "C7",
+      "title": "Organization schema",
+      "area": 2,
+      "status": "fail",
+      "one_liner": "Minimal block present — missing <code>name</code> and <code>sameAs</code>.",
+      "log_summary": "<strong>Organization schema.</strong> Minimal block present; missing <code>name</code> and <code>sameAs</code>. See detail above."
+    },
+    {
+      "id": "C8",
+      "title": "PDP titles",
+      "area": 3,
+      "status": "pass",
+      "one_liner": "5/5 sampled titles include fabric, fit, silhouette cues.",
+      "log_summary": "<strong>PDP titles.</strong> 5/5 sampled titles include use-case specifics (fabric, fit, neckline, silhouette)."
+    },
+    {
+      "id": "C9",
+      "title": "Description depth",
+      "area": 3,
+      "status": "fail",
+      "one_liner": "Spec-heavy — limited buyer context (who, when, vs what).",
+      "log_summary": "<strong>PDP descriptions.</strong> Spec-heavy, limited buyer context. See detail above."
+    }
+  ],
+  "findings": [
+    {
+      "id": "C4",
+      "title": "Duplicate Product JSON-LD block is malformed",
+      "pill": "warn",
+      "pill_label": "Hygiene flag",
+      "fields": [
+        {
+          "label": "Checked",
+          "content": "All 3 sampled PDPs — raw HTML via <code>curl</code>"
+        },
+        {
+          "label": "Found",
+          "content": "Each PDP ships <strong>two</strong> Product blocks. Block 1 is clean. Block 2 has: <code>brand.@type</code> set to the brand name (not <code>\"Brand\"</code>); product <code>name</code> mangled (e.g. <code>\"denim Denim Denim Low Rise Baggy Jeans For Daily Casual\"</code>); inconsistent <code>priceValidUntil</code> format; no <code>aggregateRating</code>."
+        },
+        {
+          "label": "Why it matters",
+          "content": "Google's Rich Results parser and AI shopping agents may pick whichever block they encounter first. If they pick the malformed block, the product is indexed with a nonsense name and invalid brand type. Live risk, not theoretical."
+        },
+        {
+          "label": "Fix",
+          "content": "Audit the PDP template for block 2 emission — remove if redundant, or correct <code>@type</code> and <code>name</code>. Validate a sample via <a href=\"https://search.google.com/test/rich-results\" target=\"_blank\">Google's Rich Results Test</a>."
+        }
+      ]
+    },
+    {
+      "id": "C6",
+      "title": "FAQPage / HowTo schema",
+      "pill": "fail",
+      "pill_label": "Fail",
+      "fields": [
+        {
+          "label": "Checked",
+          "content": "<code>/support/faq/list</code>, homepage, <code>/about_us</code>"
+        },
+        {
+          "label": "Found",
+          "content": "Only <code>Organization</code> block present. FAQ content is rich — 10 categories, dozens of questions, all server-rendered — but not wrapped in <code>FAQPage</code> or <code>HowTo</code> JSON-LD."
+        },
+        {
+          "label": "Fix",
+          "content": "Wrap existing FAQ content in <code>FAQPage</code> JSON-LD in the support template. Markup layer addition, not new content work. Lightweight if Q&amp;A is already template data. <a href=\"https://schema.org/FAQPage\" target=\"_blank\">schema.org/FAQPage</a>"
+        }
+      ]
+    },
+    {
+      "id": "C7",
+      "title": "Organization schema — present but minimal",
+      "pill": "fail",
+      "pill_label": "Fail",
+      "fields": [
+        {
+          "label": "Checked",
+          "content": "Homepage, <code>/about_us</code>"
+        },
+        {
+          "label": "Found",
+          "content": "Block is emitted but only contains <code>url</code> + <code>logo</code>. Missing <code>name</code> (\"Cider\") and <code>sameAs</code> (Instagram / TikTok / YouTube profiles Cider operates but has not machine-linked from schema)."
+        },
+        {
+          "label": "Fix",
+          "content": "Extend the existing block with <code>name</code>, <code>description</code>, and a <code>sameAs</code> array. Lightweight — block already emitted; adding fields is low risk."
+        }
+      ]
+    },
+    {
+      "id": "C9",
+      "title": "PDP descriptions — spec-heavy, limited buyer context",
+      "pill": "fail",
+      "pill_label": "Fail",
+      "fields": [
+        {
+          "label": "Checked",
+          "content": "All 5 sampled PDPs — rendered-response text (not source-level)"
+        },
+        {
+          "label": "Found",
+          "content": "Descriptions are spec sheets (Material, Style Details, Design, Care). Clear but lack buyer context — no \"who this fit flatters\", no comparison to adjacent SKUs, no \"when to wear\", no \"what this isn't for\"."
+        },
+        {
+          "label": "Caveat",
+          "content": "PDPs may include buyer-context content below the fold or in expandable sections that the default fetch didn't surface."
+        },
+        {
+          "label": "Fix",
+          "content": "Add a \"Why you'll love it\" block to every PDP — who it's for, how it compares, when to wear. At Cider's scale this is a content pipeline (LLM-assisted generation from existing spec sheets is plausible), not a manual per-product rewrite."
+        }
+      ]
+    }
+  ],
+  "fixes": [
+    {
+      "title": "Remove or repair the malformed second Product block on every PDP",
+      "description": "Highest-leverage change. Cider already has clean Product + AggregateRating schema; the duplicate emission risks agents picking the wrong data. Effort depends on whether the second block comes from the same template or a separate system (e.g. a legacy SEO plugin)."
+    },
+    {
+      "title": "Extend the Organization schema with <code>name</code> and <code>sameAs</code>",
+      "description": "The block is already emitted site-wide on homepage and <code>/about_us</code> — adding ~10 lines to it would lift C7 to pass. Lightweight if the templating system exposes a single source of truth for social profiles."
+    },
+    {
+      "title": "Wrap the existing FAQ content in FAQPage JSON-LD",
+      "description": "The Q&amp;A content is already server-rendered and organized by category; the markup is the gap. Lightweight if the FAQ template has the Q&amp;A as structured data; heavier if mixed with presentational HTML."
+    }
+  ],
+  "real_story": {
+    "heading": "The real story",
+    "paragraphs": [
+      "Cider has <strong>stronger agentic commerce infrastructure than its reputation suggests</strong>. A fast-fashion Gen Z brand scoring 6/9 with complete Product + AggregateRating schema across the sampled catalog is genuinely above-average for the category.",
+      "The gaps are specific and fixable: missing <code>FAQPage</code> markup despite having the content, minimal <code>Organization</code> schema despite having the social footprint, and a malformed duplicate <code>Product</code> block that should be removed."
+    ]
+  },
+  "disclosure": "This audit scored 3 PDPs and 4 auxiliary pages (homepage, <code>/about_us</code>, <code>/support/faq/list</code>, <code>/goods/*</code>) via source-level <code>curl</code> fetches on 2026-04-19. Findings are sample-based. Does not audit uniqueness (C10, deferred) or GEO (geographic/local retrieval). Schema variance in sampled PDPs does not guarantee sitewide coverage — rerun with <code>--confidence=high</code> or <code>--full</code> for broader verification."
+}

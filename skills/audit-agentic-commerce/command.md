@@ -1,6 +1,6 @@
 ---
 description: Score an ecommerce store against the 9-criterion Agentic Commerce Readiness Index
-argument-hint: <store-url> [--confidence=high] [--full]
+argument-hint: <store-url> [--confidence=high] [--full] [--output=md|html|json|both]
 ---
 
 You are running the **Agentic Commerce Readiness Index** audit on the store
@@ -28,8 +28,15 @@ C2/C4/C5, and 5 PDPs for C8/C9.
 - `--full`: score on ALL PDPs listed in the sitemap (cap at 200). Slow
   and expensive, for paid engagements where the audit is the deliverable.
   Changes the language from "sampled" to "sitewide."
+- `--output=md` (default): write a Markdown report.
+- `--output=html`: ALSO write a self-contained HTML report using
+  `render.py`. Use when the user needs a shareable artifact (email,
+  Feishu, stakeholder review).
+- `--output=json`: write only the structured audit JSON (no prose).
+  Useful for downstream pipelines, dashboards, or cross-brand aggregation.
+- `--output=both`: write Markdown AND HTML.
 
-If neither flag is present, default sampling applies and all findings
+If no sampling flag is present, default sampling applies and all findings
 must use **sample-based language** (see language guardrails below).
 
 ## How to verify JSON-LD — use `Bash curl`, not WebFetch
@@ -194,9 +201,123 @@ This is an audit, not a sales pitch. Follow these rules in every line:
 
 ---
 
-## Output format
+## Output workflow (v1.2+)
 
-Produce a structured report with:
+Regardless of the `--output` flag, you **always** produce the full audit
+as a structured Python dict first. This is the canonical output.
+
+After the dict is complete, serialize to JSON and optionally render:
+
+```bash
+# 1. Always: write the JSON
+cat > audit-{slug}.json <<'EOF'
+{ ...full audit dict as JSON... }
+EOF
+
+# 2. If --output includes html: render
+python3 /path/to/skills/audit-agentic-commerce/render.py \
+  audit-{slug}.json -o audit-{slug}.html
+
+# 3. If --output includes md: write the markdown report inline
+#    (use the same dict as source of truth — don't re-derive findings)
+```
+
+Where to write: default to `audits/` relative to the user's current
+working directory. The user's current directory at time of skill
+invocation is where they'll expect artifacts.
+
+### JSON schema (required top-level fields)
+
+The JSON MUST conform to this structure or `render.py` will fail.
+An example is at `skills/audit-agentic-commerce/example.json` in the
+kit repo — use it as a template.
+
+```json
+{
+  "meta": {
+    "audit_title": "Agentic Commerce Readiness Audit",
+    "store_name": "Brand Name",
+    "store_url": "https://example.com",
+    "audit_date": "YYYY-MM-DD",
+    "sampling_scope": "3 PDPs / 5 titles / N aux pages",
+    "evidence_method": "source-level <code>curl</code>"
+  },
+  "score": {
+    "total": 6,
+    "max": 9,
+    "shape_label": "Partially Ready",
+    "description": "One-to-two sentence description of the score shape."
+  },
+  "areas": [
+    {"num": 1, "name": "Crawlability", "score": 3, "max": 3, "passed": ["C1","C2","C3"]},
+    {"num": 2, "name": "Structured data", "score": 2, "max": 4, "passed": ["C4","C5"]},
+    {"num": 3, "name": "Content quality", "score": 1, "max": 2, "passed": ["C8"]}
+  ],
+  "criteria": [
+    {
+      "id": "C1",
+      "title": "AI crawler access",
+      "area": 1,
+      "status": "pass",
+      "one_liner": "Short (<80 chars) summary shown in the 9-grid.",
+      "log_summary": "<strong>Title.</strong> Longer one-paragraph summary for the check-log accordion."
+    }
+    // ... C1 through C9
+  ],
+  "findings": [
+    // Only include entries for failed criteria AND schema hygiene flags.
+    // Skip passes — they already show in the criteria grid above.
+    {
+      "id": "C6",
+      "title": "FAQPage / HowTo schema",
+      "pill": "fail",
+      "pill_label": "Fail",
+      "fields": [
+        {"label": "Checked", "content": "Pages you fetched"},
+        {"label": "Found", "content": "What you observed"},
+        {"label": "Fix", "content": "Specific remediation step with doc links"}
+      ]
+    }
+    // For schema hygiene flags: "pill": "warn", "pill_label": "Hygiene flag"
+    // Optional extra fields: "Why it matters", "Caveat", "Example"
+  ],
+  "fixes": [
+    {
+      "title": "Top fix — HTML allowed in title for <code>/<strong>",
+      "description": "One-paragraph rationale with conditional effort language."
+    }
+    // 2-3 fixes total, ranked by leverage
+  ],
+  "real_story": {
+    "heading": "The real story",
+    "paragraphs": [
+      "One to three paragraphs of narrative synthesis. HTML inline tags allowed."
+    ]
+  },
+  "disclosure": "Sampling scope, date, caveats. HTML inline tags allowed."
+}
+```
+
+**Content fields are HTML-safe fragments**: you may include `<code>`,
+`<strong>`, `<em>`, `<a href>` inline for emphasis. Do not include
+block tags (`<p>`, `<div>`), JS, or malformed HTML. The renderer
+trusts this input (it's a developer tool, not a public form).
+
+### Markdown output
+
+When the user requests Markdown (default), derive the prose from the
+same dict. Structure mirrors the HTML:
+
+1. `# {audit_title} — {store_name}` with meta block
+2. `## Score: {total}/{max} — {shape_label}` with area breakdown table
+3. `## What needs fixing` — iterate `findings` as Checked/Found/Fix
+4. `## Fix priority` — numbered list of `fixes`
+5. `## The real story` — paragraphs
+6. Disclosure as italicized footer
+
+---
+
+## Output format
 
 1. **Score**: `{total}/9` with a **shape-describing label** (not a
    single-word tier). Choose the phrasing that matches the distribution:
